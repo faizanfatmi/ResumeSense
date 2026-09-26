@@ -3,7 +3,10 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  // In production the bundle is served by Django/WhiteNoise under /static/.
+  // In dev the Vite server serves from the root.
+  base: mode === 'production' ? '/static/' : '/',
   plugins: [
     react(),
     tailwindcss(),
@@ -21,4 +24,4 @@ export default defineConfig({
       }
     }
   }
-})
+}))

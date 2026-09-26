@@ -105,10 +105,10 @@ docker compose up --build
 #### Backend Setup
 
 ```bash
-cd backend
-
-# 1. Copy environment template and adjust values as needed
+# 1. From the repo root, copy the single environment template
 cp .env.example .env
+
+cd backend
 
 # 2. Activate virtual environment
 .\venv\Scripts\activate   # Windows
@@ -129,14 +129,10 @@ python manage.py runserver 8000
 ```bash
 cd frontend
 
-# 1. (Optional) copy the env template — leave VITE_API_URL blank for local dev,
-#    the Vite dev server proxies /api to the backend automatically.
-cp .env.example .env
-
-# 2. Install dependencies
+# 1. Install dependencies
 npm install
 
-# 3. Start Vite development server
+# 2. Start Vite development server (proxies /api to the backend automatically)
 npm run dev
 ```
 
@@ -144,28 +140,24 @@ Visit [http://localhost:5173](http://localhost:5173) in your browser.
 
 ---
 
-## ☁️ Deploy to Render
+## ☁️ Deploy to Render (single service)
 
-Environment variables are split per service:
+The React frontend is **built into and served by the Django backend**, so the
+whole app runs as **one** Render web service — no separate frontend host, no CORS,
+no `VITE_API_URL` to manage. A single **`.env` / `.env.example`** at the repo root
+configures everything.
 
-- **`backend/.env.example`** — Django / DRF settings (secret key, database, CORS, JWT, uploads).
-- **`frontend/.env.example`** — the Vite bundle (`VITE_API_URL`, baked in at build time).
-
-The repo ships a **`render.yaml`** Blueprint that provisions everything in one step:
+The repo ships a **`render.yaml`** Blueprint that provisions it in one step:
 
 1. In Render, choose **New → Blueprint** and select this repository. It creates a
-   Postgres database, the **Django backend** (Docker web service), and the
-   **React frontend** (static site).
+   Postgres database and one **Docker web service** (root `Dockerfile`) that builds
+   the frontend and serves the SPA, the `/api` endpoints, and the admin together.
 2. `SECRET_KEY`, `JWT_SECRET`, and `DATABASE_URL` are generated / wired
-   automatically. The backend trusts any `*.onrender.com` origin via a CORS regex.
-3. After the first deploy, set the frontend's **`VITE_API_URL`** in the Render
-   dashboard to your backend URL plus `/api`
-   (e.g. `https://resumesense-backend.onrender.com/api`), then redeploy the
-   frontend with **Clear build cache & deploy** so the value is baked in.
+   automatically — nothing to set by hand after the first deploy.
 
 > The backend loads `torch` / `sentence-transformers`, which are memory-hungry.
-> The Blueprint defaults the backend to the `standard` instance; the `free`
-> Postgres plan expires after 30 days — raise both for real production use.
+> The Blueprint defaults to the `standard` instance; the `free` Postgres plan
+> expires after 30 days — raise both for real production use.
 
 ---
 

@@ -1,18 +1,11 @@
 # ============================================================
-# ResumeSense — Render Blueprint
+# ResumeSense — Render Blueprint (single-service deploy)
 # ============================================================
-# Deploy with Render's "Blueprints" (New > Blueprint, point at this repo).
-# It provisions three resources: a Postgres database, the Django backend
-# (Docker), and the React/Vite frontend (static site).
+# One Docker web service builds the React frontend and serves it together with
+# the Django API and admin. Deploy with New > Blueprint, pointed at this repo.
 #
-# After the FIRST deploy, set one value in the dashboard:
-#   frontend service -> Environment -> VITE_API_URL =
-#       https://<your-backend-service>.onrender.com/api
-#   then trigger a manual "Clear build cache & deploy" of the frontend so the
-#   new value is baked into the bundle (Vite reads VITE_* only at build time).
-#
-# The backend already trusts any *.onrender.com origin via CORS regex, so no
-# backend change is needed once the frontend is live.
+# SECRET_KEY, JWT_SECRET and DATABASE_URL are wired automatically — nothing to
+# set by hand after the first deploy.
 
 databases:
   - name: resumesense-db
@@ -22,9 +15,8 @@ databases:
     region: oregon
 
 services:
-  # ---------- Backend: Django + DRF (Docker) ----------
   - type: web
-    name: resumesense-backend
+    name: resumesense
     runtime: docker
     repo: https://github.com/faizanfatmi/ResumeSense  # adjust if forked
     branch: main
@@ -32,8 +24,8 @@ services:
     # torch + sentence-transformers are memory-hungry; "starter" (512 MB) will
     # likely OOM. Use "standard" (2 GB) or higher for reliable operation.
     plan: standard
-    dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
     healthCheckPath: /admin/login/
     envVars:
       - key: SECRET_KEY
@@ -48,35 +40,11 @@ services:
         fromDatabase:
           name: resumesense-db
           property: connectionString
-      # Trust any Render subdomain so the exact frontend URL need not be known.
-      - key: CORS_ALLOWED_ORIGIN_REGEXES
-        value: '^https://.*\.onrender\.com$'
       - key: CSRF_TRUSTED_ORIGINS
         value: https://*.onrender.com
       - key: JWT_ACCESS_TOKEN_LIFETIME_MINUTES
-        value: "60"
+        value: "30"
       - key: JWT_REFRESH_TOKEN_LIFETIME_DAYS
         value: "7"
       - key: MAX_UPLOAD_SIZE_MB
         value: "10"
-
-  # ---------- Frontend: React + Vite (static site) ----------
-  - type: web
-    name: resumesense-frontend
-    runtime: static
-    repo: https://github.com/faizanfatmi/ResumeSense  # adjust if forked
-    branch: main
-    rootDir: ./frontend
-    buildCommand: npm ci && npm run build
-    staticPublishPath: ./dist
-    envVars:
-      - key: NODE_VERSION
-        value: "20"
-      # Set in the dashboard after the backend URL is known (see header note).
-      - key: VITE_API_URL
-        sync: false
-    routes:
-      # SPA fallback so client-side routes resolve to index.html.
-      - type: rewrite
-        source: /*
-        destination: /index.html

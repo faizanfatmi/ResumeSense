@@ -117,12 +117,21 @@ USE_TZ = True
 # Static files
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Compiled React/Vite frontend (present in the production image; absent during
+# local API-only dev where the Vite dev server serves the SPA instead).
+FRONTEND_BUILD_DIR = BASE_DIR / 'frontend_build'
+STATICFILES_DIRS = [FRONTEND_BUILD_DIR] if FRONTEND_BUILD_DIR.exists() else []
+
 STORAGES = {
     'default': {
         'BACKEND': 'django.core.files.storage.FileSystemStorage',
     },
     'staticfiles': {
-        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+        # Non-manifest: Vite already fingerprints its own asset filenames, so we
+        # only want compression + long-cache headers, not Django re-hashing
+        # (which would break Vite's direct asset references / require a manifest).
+        'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
     },
 }
 
