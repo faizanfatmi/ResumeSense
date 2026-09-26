@@ -70,9 +70,18 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database
-# Use PostgreSQL if DB_NAME is set, otherwise fall back to SQLite for easy local dev
+# Resolution order:
+#   1. DATABASE_URL  — a full connection string (Render provides this)
+#   2. discrete DB_* — PostgreSQL for local dev / docker-compose
+#   3. SQLite        — zero-config fallback for quick local runs
+DATABASE_URL = os.getenv('DATABASE_URL', '')
 DB_NAME = os.getenv('DB_NAME', '')
-if DB_NAME:
+if DATABASE_URL:
+    import dj_database_url
+    DATABASES = {
+        'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
+    }
+elif DB_NAME:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -164,10 +173,29 @@ SIMPLE_JWT = {
 }
 
 # CORS
-CORS_ALLOWED_ORIGINS = os.getenv(
-    'CORS_ALLOWED_ORIGINS', 'http://localhost:5173,http://localhost:3000'
-).split(',')
+CORS_ALLOWED_ORIGINS = [
+    o for o in os.getenv(
+        'CORS_ALLOWED_ORIGINS', 'http://localhost:5173,http://localhost:3000'
+    ).split(',') if o
+]
 CORS_ALLOW_CREDENTIALS = True
+# Optional regex origins (e.g. ^https://.*\.onrender\.com$) so the exact
+# deployed frontend URL need not be known ahead of time.
+_cors_regexes = os.getenv('CORS_ALLOWED_ORIGIN_REGEXES', '')
+if _cors_regexes:
+    CORS_ALLOWED_ORIGIN_REGEXES = [r for r in _cors_regexes.split(',') if r]
+
+# CSRF (only relevant for the Django admin behind an HTTPS proxy)
+_csrf_origins = os.getenv('CSRF_TRUSTED_ORIGINS', '')
+if _csrf_origins:
+    CSRF_TRUSTED_ORIGINS = [c for c in _csrf_origins.split(',') if c]
+
+# Production security — Render (and most PaaS) terminate TLS at a proxy and
+# forward the original scheme in X-Forwarded-Proto.
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 # File Upload
 MAX_UPLOAD_SIZE = int(os.getenv('MAX_UPLOAD_SIZE_MB', 10)) * 1024 * 1024  # Convert to bytes

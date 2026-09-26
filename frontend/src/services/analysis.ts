@@ -1,4 +1,4 @@
-import api from './api';
+import api, { API_BASE_URL } from './api';
 import { Analysis, UploadedFile } from '../types';
 
 export const analysisService = {
@@ -37,7 +37,7 @@ export const analysisService = {
   },
 
   getReportDownloadUrl(analysisId: number): string {
-    return `/api/analysis/${analysisId}/report/`;
+    return `${API_BASE_URL}/analysis/${analysisId}/report/`;
   },
 
   async getFiles(): Promise<UploadedFile[]> {

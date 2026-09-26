@@ -107,17 +107,20 @@ docker compose up --build
 ```bash
 cd backend
 
-# 1. Activate virtual environment
+# 1. Copy environment template and adjust values as needed
+cp .env.example .env
+
+# 2. Activate virtual environment
 .\venv\Scripts\activate   # Windows
 # source venv/bin/activate # Linux / macOS
 
-# 2. Run migrations
+# 3. Run migrations
 python manage.py migrate
 
-# 3. Seed demo data (Pre-populates Faizan Fatmi demo user & analysis)
+# 4. Seed demo data (Pre-populates Faizan Fatmi demo user & analysis)
 python manage.py seed_demo_data
 
-# 4. Start backend server
+# 5. Start backend server
 python manage.py runserver 8000
 ```
 
@@ -126,14 +129,43 @@ python manage.py runserver 8000
 ```bash
 cd frontend
 
-# 1. Install dependencies
+# 1. (Optional) copy the env template — leave VITE_API_URL blank for local dev,
+#    the Vite dev server proxies /api to the backend automatically.
+cp .env.example .env
+
+# 2. Install dependencies
 npm install
 
-# 2. Start Vite development server
+# 3. Start Vite development server
 npm run dev
 ```
 
 Visit [http://localhost:5173](http://localhost:5173) in your browser.
+
+---
+
+## ☁️ Deploy to Render
+
+Environment variables are split per service:
+
+- **`backend/.env.example`** — Django / DRF settings (secret key, database, CORS, JWT, uploads).
+- **`frontend/.env.example`** — the Vite bundle (`VITE_API_URL`, baked in at build time).
+
+The repo ships a **`render.yaml`** Blueprint that provisions everything in one step:
+
+1. In Render, choose **New → Blueprint** and select this repository. It creates a
+   Postgres database, the **Django backend** (Docker web service), and the
+   **React frontend** (static site).
+2. `SECRET_KEY`, `JWT_SECRET`, and `DATABASE_URL` are generated / wired
+   automatically. The backend trusts any `*.onrender.com` origin via a CORS regex.
+3. After the first deploy, set the frontend's **`VITE_API_URL`** in the Render
+   dashboard to your backend URL plus `/api`
+   (e.g. `https://resumesense-backend.onrender.com/api`), then redeploy the
+   frontend with **Clear build cache & deploy** so the value is baked in.
+
+> The backend loads `torch` / `sentence-transformers`, which are memory-hungry.
+> The Blueprint defaults the backend to the `standard` instance; the `free`
+> Postgres plan expires after 30 days — raise both for real production use.
 
 ---
 

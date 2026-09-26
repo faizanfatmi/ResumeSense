@@ -15,6 +15,7 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { analysisService } from '../services/analysis';
+import { API_BASE_URL } from '../services/api';
 import { UploadedFile } from '../types';
 
 export const FilesPage: React.FC = () => {
@@ -187,7 +188,7 @@ export const FilesPage: React.FC = () => {
                             <Eye className="w-3.5 h-3.5" />
                           </button>
                         </Link>
-                        <a href={`/api/files/${file.id}/download/`} target="_blank" rel="noreferrer">
+                        <a href={`${API_BASE_URL}/files/${file.id}/download/`} target="_blank" rel="noreferrer">
                           <button
                             className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-md transition-colors"
                             title="Download Original"

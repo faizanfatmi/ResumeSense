@@ -1,7 +1,13 @@
 import axios from 'axios';
 
+// Base URL for the backend API. On Render (separate frontend/backend hosts)
+// set VITE_API_URL, e.g. https://resumesense-backend.onrender.com/api.
+// Locally and under docker-compose it is unset, so requests use the relative
+// "/api" path, which the Vite dev server / nginx proxy to the backend.
+export const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -26,7 +32,7 @@ api.interceptors.response.use(
       const refreshToken = localStorage.getItem('resumesense_refresh_token');
       if (refreshToken) {
         try {
-          const res = await axios.post('/api/auth/refresh/', { refresh: refreshToken });
+          const res = await axios.post(`${API_BASE_URL}/auth/refresh/`, { refresh: refreshToken });
           const newAccess = res.data.access;
           localStorage.setItem('resumesense_access_token', newAccess);
           originalRequest.headers.Authorization = `Bearer ${newAccess}`;
